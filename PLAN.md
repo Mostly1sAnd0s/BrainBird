@@ -98,6 +98,8 @@ Rationale: do band-power/threshold detection **on the Arduino** and send discret
 
 ## 9. Build order
 
+Status: M1–M5 complete. 36 tests green (`npm test`); firmware compile-checked with `arduino-cli compile --fqbn arduino:avr:uno`.
+
 1. **M1 — Playable:** server skeleton + canvas game + spacebar + pipes + score + death. (No audio yet.)
 2. **M2 — Arcade feel:** WebAudio SFX/music, particles, screen shake, parallax, neon rendering.
 3. **M3 — Persistence:** score entry + top-10 API + menu table.
