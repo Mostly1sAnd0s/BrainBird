@@ -10,6 +10,7 @@ Plug an Arduino-based EEG sensor into your computer and focus to flap. No headse
 - **Spacebar fallback** — always playable without hardware.
 - **Neon synthwave visuals** — grid horizon, parallax city, glowing pipes, and a pixel brain with wings.
 - **Synthesized audio** — all sounds are generated with WebAudio. EEG flaps get a distinct "psychic" chord so you can hear your brain working.
+- **A real soundtrack** — a composed 69-second, four-section synthwave track (bass, arpeggio, drums, lead) generated as seeded data, so every run gets a fresh arrangement and hot streaks push the song into its fullest section.
 - **Procedural obstacles** — difficulty ramps with your score.
 - **Shared high scores** — top 10 with names, stored on the server, EEG runs badged with a brain icon.
 - **Settings page** — music/SFX toggles, volume, drop-speed slider (slow the fall for EEG play), jump-threshold slider (your "cognitive jump point"), device pairing and connection status, signal-strength meter.
