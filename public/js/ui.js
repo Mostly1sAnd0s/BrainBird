@@ -78,7 +78,12 @@ export function createUi({ onSubmitScore, onSettingsChange, onMenu, eeg }) {
   $('openSettings').addEventListener('click', () => show(el.settings, true));
   $('menuBtn').addEventListener('click', onMenu);
   $('closeSettings').addEventListener('click', () => show(el.settings, false));
-  for (const input of [el.musicOn, el.sfxOn, el.volume, el.simOn]) input.addEventListener('change', emitSettings);
+  // 'input' so sliders respond while dragging, 'change' as the fallback for
+  // accessibility drivers that skip input events. emitSettings is idempotent.
+  for (const input of [el.musicOn, el.sfxOn, el.volume, el.simOn, el.gravity, el.gate]) {
+    input.addEventListener('input', emitSettings);
+    input.addEventListener('change', emitSettings);
+  }
 
   $('pairBtn').addEventListener('click', () => eeg.pair().catch((err) => setConn('err', err.message)));
   $('connBtn').addEventListener('click', async () => {
@@ -97,7 +102,9 @@ export function createUi({ onSubmitScore, onSettingsChange, onMenu, eeg }) {
   if (s.music === false) el.musicOn.checked = false;
   if (s.sfx === false) el.sfxOn.checked = false;
   if (typeof s.vol === 'number') el.volume.value = String(Math.round(s.vol * 100));
-  emitSettings();
+  if (typeof s.gravity === 'number') el.gravity.value = String(s.gravity);
+  if (typeof s.gate === 'number') el.gate.value = String(s.gate);
+  emitSettings(); // must run AFTER restores so boot state matches the controls
 
   return {
     showMenu(on) { show(el.menu, on); if (on) refreshPortList(); },
