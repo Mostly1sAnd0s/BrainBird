@@ -1,9 +1,11 @@
 // All audio is synthesized with WebAudio — no asset files. One AudioContext,
-// separate music and SFX buses, gated by user settings.
+// separate music and SFX buses, gated by user settings. Musical content is
+// composed data from music.js; this module only schedules and voices it.
+import { buildSong } from './music.js';
 
 let ctx = null, master = null, musicBus = null, sfxBus = null;
 let musicOn = true, sfxOn = true, volume = 0.7;
-let musicTimer = null, stepIdx = 0;
+let musicTimer = null;
 
 export function initAudio() {
   if (ctx) return ctx;
@@ -39,11 +41,12 @@ function tone(freq, { type = 'square', dur = 0.15, gain = 0.25, bus = sfxBus, sl
   osc.connect(g).connect(bus);
   osc.start(t0);
   osc.stop(t0 + dur + 0.02);
+  osc.onended = () => { osc.disconnect(); g.disconnect(); };
 }
 
-function noiseBurst({ dur = 0.12, freq = 1200, q = 2, gain = 0.3 }) {
+function noiseBurst({ dur = 0.12, freq = 1200, q = 2, gain = 0.3, bus = null, delay = 0 }) {
   if (!ctx) return;
-  const t0 = ctx.currentTime;
+  const t0 = ctx.currentTime + Math.max(0, delay);
   const len = Math.floor(ctx.sampleRate * dur);
   const buf = ctx.createBuffer(1, len, ctx.sampleRate);
   const data = buf.getChannelData(0);
@@ -55,8 +58,9 @@ function noiseBurst({ dur = 0.12, freq = 1200, q = 2, gain = 0.3 }) {
   const g = ctx.createGain();
   g.gain.setValueAtTime(gain, t0);
   g.gain.exponentialRampToValueAtTime(0.001, t0 + dur);
-  src.connect(bp).connect(g).connect(sfxBus);
+  src.connect(bp).connect(g).connect(bus || sfxBus);
   src.start(t0);
+  src.onended = () => { src.disconnect(); bp.disconnect(); g.disconnect(); };
 }
 
 // --- game events -----------------------------------------------------------
@@ -96,25 +100,73 @@ export function sfxLevelUp() {
   [0, 1, 2, 4].forEach((n, i) => tone(PENTA[n], { type: 'square', dur: 0.12, gain: 0.22, delay: i * 0.07 }));
 }
 
-// --- music: 8-step synthwave arpeggio, scheduled ahead ----------------------
+// --- music: lookahead scheduler playing the composed song (music.js) --------
 
-const BASS = [55, 55, 82.4, 55, 65.4, 65.4, 49, 61.7]; // A1 A1 E2 A1 C2 C2 G1 B1
+let song = buildSong(7);
+let SPB = 60 / song.bpm; // seconds per beat
+let songStart = 0; // ctx time of the current loop's beat 0
+let songIdx = 0; // next event index to schedule
+
+function playEvent(e, at) {
+  const dur = Math.max(0.03, e.dur * SPB);
+  const delay = Math.max(0, at - ctx.currentTime);
+  switch (e.kind) {
+    case 'bass':
+      tone(e.freq, { type: 'sawtooth', dur, gain: e.gain, bus: musicBus, delay });
+      break;
+    case 'arp':
+      tone(e.freq, { type: 'square', dur: Math.min(dur, 0.09), gain: e.gain, bus: musicBus, delay });
+      break;
+    case 'lead': // detuned pair for width — the vocal of the track
+      tone(e.freq, { type: 'triangle', dur, gain: e.gain, bus: musicBus, delay });
+      tone(e.freq * 1.003, { type: 'triangle', dur, gain: e.gain * 0.6, bus: musicBus, delay });
+      break;
+    case 'hat':
+      noiseBurst({ dur: 0.04, freq: 8000, q: 1.2, gain: e.gain, bus: musicBus, delay });
+      break;
+    case 'snare':
+      noiseBurst({ dur: 0.11, freq: 1800, q: 0.8, gain: e.gain, bus: musicBus, delay });
+      tone(190, { type: 'triangle', dur: 0.08, gain: e.gain * 0.5, bus: musicBus, delay });
+      break;
+  }
+}
 
 export function startMusic() {
   initAudio();
   if (!musicOn || musicTimer) return;
-  let nextTime = ctx.currentTime + 0.1;
+  // fresh arrangement every run: same style, new melody/drive variations
+  song = buildSong((Math.random() * 2 ** 31) | 0);
+  SPB = 60 / song.bpm;
+  songStart = ctx.currentTime + 0.1;
+  songIdx = 0;
   musicTimer = setInterval(() => {
-    while (nextTime < ctx.currentTime + 0.5) {
-      const f = BASS[stepIdx % BASS.length];
-      tone(f, { type: 'sawtooth', dur: 0.22, gain: 0.14, bus: musicBus, delay: nextTime - ctx.currentTime });
-      tone(f * 4, { type: 'square', dur: 0.09, gain: 0.03, bus: musicBus, delay: nextTime - ctx.currentTime });
-      nextTime += 0.24;
-      stepIdx++;
+    const horizon = ctx.currentTime + 0.5;
+    while (songIdx < song.events.length) {
+      const e = song.events[songIdx];
+      const at = songStart + e.t * SPB;
+      if (at >= horizon) break;
+      // 30ms late-tolerance absorbs setInterval jitter (playEvent floors delay
+      // at 0). Events later than that — a throttled background tab — are
+      // skipped rather than stacked into a stuttered blast when we wake up.
+      if (at > ctx.currentTime - 0.03) playEvent(e, at);
+      songIdx++;
+      if (songIdx >= song.events.length) { songIdx = 0; songStart += song.loopBeats * SPB; }
     }
   }, 200);
 }
 
 export function stopMusic() {
   if (musicTimer) { clearInterval(musicTimer); musicTimer = null; }
+}
+
+// Score milestone: jump the playhead one 8-bar section ahead, so a hot run
+// lands on the fuller arrangement sooner. No-op near the loop end (the
+// natural wrap arrives before a skip would help).
+export function advanceMusicSection() {
+  if (!musicTimer || !ctx) return;
+  const nowBeat = (ctx.currentTime - songStart) / SPB;
+  const target = nowBeat + 8 * 4;
+  let i = songIdx;
+  while (i < song.events.length && song.events[i].t < target) i++;
+  if (i < song.events.length) songIdx = i;
 }

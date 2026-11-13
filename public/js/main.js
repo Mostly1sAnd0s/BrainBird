@@ -2,7 +2,7 @@
 // EEG wiring with debounce + latency readout. Game rules live in game.js (tested).
 import { createWorld, flap, stepWorld, clampGravity, WORLD_H } from './game.js';
 import { render, createFx } from './render.js';
-import { initAudio, startMusic, stopMusic, setSettings, sfxFlap, sfxScore, sfxHit, sfxLevelUp } from './audio.js';
+import { initAudio, startMusic, stopMusic, setSettings, advanceMusicSection, sfxFlap, sfxScore, sfxHit, sfxLevelUp } from './audio.js';
 import { createEegClient, serialSupported } from './serial.js';
 import { createEegSim } from './eegsim.js';
 import { createDebouncer, createConfidenceGate } from './eeg.js';
@@ -164,7 +164,12 @@ function frame(now) {
         ui.setScore(world.score);
         sfxScore(world.score);
         fx.burst(world.bird.x + 20, world.bird.y, 6, '#00f0ff', 2);
-        if (world.score % 10 === 0) { sfxLevelUp(); fx.screenFlash(); }
+        if (world.score % 10 === 0) {
+          sfxLevelUp();
+          fx.screenFlash();
+          // the track has a real arc now: a long run nudges it forward a section
+          if (world.score % 40 === 0) advanceMusicSection();
+        }
       }
       if (ev.dead) die();
     } else if (world.bird) {
