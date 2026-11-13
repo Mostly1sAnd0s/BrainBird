@@ -27,6 +27,42 @@ export function createUi({ onSubmitScore, onSettingsChange, onMenu, eeg }) {
 
   const show = (node, on) => node.classList.toggle('hidden', !on);
 
+  // Helper functions live in lexical scope on purpose. Object-literal sibling
+  // methods cannot call each other by bare name — that reference error is what
+  // once left FLATLINE painted over the menu (see ui.test.js).
+  async function refreshPortList() {
+    const ports = await eeg.listPaired();
+    el.portList.innerHTML = '';
+    ports.forEach((p, i) => {
+      const o = document.createElement('option');
+      const info = p.getInfo?.() || {};
+      o.value = String(i);
+      o.textContent = info.productId ? `PID ${info.productId.toString(16)} / VID ${info.vendorId.toString(16)}` : `paired device ${i + 1}`;
+      el.portList.appendChild(o);
+    });
+    if (!ports.length) {
+      const o = document.createElement('option');
+      o.textContent = 'no paired devices';
+      el.portList.appendChild(o);
+    }
+  }
+
+  function setConn(state, detail = '') {
+    el.connStatus.textContent = state;
+    el.connStatus.className = 'chip' + (state === 'connected' ? ' on' : state === 'error' ? ' err' : '');
+    if (detail) el.latency.textContent = detail;
+  }
+
+  function renderScores(scores) {
+    el.hiscores.innerHTML = '';
+    scores.slice(0, 10).forEach((e, i) => {
+      const tr = document.createElement('tr');
+      const badge = e.source === 'eeg' ? ' 🧠' : e.source === 'sim' ? ' 🎛' : '';
+      tr.innerHTML = `<td>${i + 1}. ${e.name}${badge}</td><td>${e.score}</td>`;
+      el.hiscores.appendChild(tr);
+    });
+  }
+
   function emitSettings() {
     onSettingsChange({
       music: el.musicOn.checked, sfx: el.sfxOn.checked, vol: el.volume.value / 100,
@@ -77,38 +113,11 @@ export function createUi({ onSubmitScore, onSettingsChange, onMenu, eeg }) {
     showGameOver(on) { show(el.gameover, on); },
     setScore(n) { el.score.textContent = n > 0 ? n : ''; },
     setFinalScore(n) { el.finalScore.textContent = `SCORE ${n}`; },
-    renderScores(scores) {
-      el.hiscores.innerHTML = '';
-      scores.slice(0, 10).forEach((e, i) => {
-        const tr = document.createElement('tr');
-        const badge = e.source === 'eeg' ? ' 🧠' : e.source === 'sim' ? ' 🎛' : '';
-        tr.innerHTML = `<td>${i + 1}. ${e.name}${badge}</td><td>${e.score}</td>`;
-        el.hiscores.appendChild(tr);
-      });
-    },
-    setConn(state, detail = '') {
-      el.connStatus.textContent = state;
-      el.connStatus.className = 'chip' + (state === 'connected' ? ' on' : state === 'error' ? ' err' : '');
-      if (detail) el.latency.textContent = detail;
-    },
+    renderScores,
+    setConn,
     setStrength(v01) { el.strengthBar.style.width = `${Math.round(v01 * 100)}%`; },
     setLatency(ms) { el.latency.textContent = `last EEG flap latency: ${ms} ms`; },
-    async refreshPortList() {
-      const ports = await eeg.listPaired();
-      el.portList.innerHTML = '';
-      ports.forEach((p, i) => {
-        const o = document.createElement('option');
-        const info = p.getInfo?.() || {};
-        o.value = String(i);
-        o.textContent = info.productId ? `PID ${info.productId.toString(16)} / VID ${info.vendorId.toString(16)}` : `paired device ${i + 1}`;
-        el.portList.appendChild(o);
-      });
-      if (!ports.length) {
-        const o = document.createElement('option');
-        o.textContent = 'no paired devices';
-        el.portList.appendChild(o);
-      }
-    },
+    refreshPortList,
     serialSupported(on, hint) {
       if (!on) {
         $('serialSupport').textContent = hint;
