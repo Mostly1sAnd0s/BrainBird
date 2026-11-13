@@ -1,0 +1,21 @@
+# Dependencies
+node_modules/
+
+# Generated TLS material (self-signed cert created on first boot)
+certs/
+
+# Runtime data
+data/scores.json
+
+# Arduino build artifacts
+build/
+
+# Logs
+*.log
+npm-debug.log*
+
+# OS / editor noise
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
