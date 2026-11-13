@@ -21,7 +21,7 @@ Arduino (EEG sensor) --USB/serial--> Browser (Web Serial API) --> Canvas game
 BrainBird/
   package.json
   server/
-    index.js        # Express static + HTTPS on 0.0.0.0:8443 (HTTP 8080 for localhost dev)
+    index.js        # Express static + HTTPS on 0.0.0.0:8443 (HTTP 8788 for localhost dev)
     cert.js         # generate self-signed cert on first boot (selfsigned pkg), cache in certs/
     scores.js       # GET/POST /api/scores, persisted to data/scores.json
   data/
@@ -65,7 +65,7 @@ Rationale: do band-power/threshold detection **on the Arduino** and send discret
 ## 4b. Server details
 
 - `GET /api/scores` / `POST /api/scores` — top-10 list, persisted server-side so all LAN players share one leaderboard.
-- Generates a self-signed cert on first boot (`certs/` is gitignored); binds HTTPS `0.0.0.0:8443` plus plain HTTP `8080` bound to localhost for development. Prints LAN URLs on boot. No auth (LAN-only tool).
+- Generates a self-signed cert on first boot (`certs/` is gitignored); binds HTTPS `0.0.0.0:8443` plus plain HTTP `8788` bound to localhost for development. Prints LAN URLs on boot. No auth (LAN-only tool).
 
 ## 5. Gameplay
 

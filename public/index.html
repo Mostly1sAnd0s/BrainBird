@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>BrainBird — fly with your brain</title>
+<link rel="stylesheet" href="/css/ui.css">
+</head>
+<body>
+<div id="stage">
+  <canvas id="game" width="960" height="540"></canvas>
+
+  <div id="hud"><span id="score"></span></div>
+
+  <section id="menu" class="overlay">
+    <h1 class="title">BRAIN<span>BIRD</span></h1>
+    <p class="tagline">fly with your brain</p>
+    <p class="prompt">PRESS SPACE — or flap with the EEG</p>
+    <table id="hiscores"><tbody></tbody></table>
+    <button id="openSettings" class="btn ghost">⚙ SETTINGS</button>
+  </section>
+
+  <section id="gameover" class="overlay hidden">
+    <h2>FLATLINE</h2>
+    <p id="finalScore"></p>
+    <p id="rankMsg" class="prompt"></p>
+    <form id="scoreForm">
+      <input id="playerName" maxlength="16" placeholder="NAME" autocomplete="off">
+      <button class="btn" type="submit">SUBMIT</button>
+    </form>
+    <p class="hint">space = play again</p>
+  </section>
+
+  <section id="settings" class="overlay panel hidden">
+    <h2>SETTINGS</h2>
+    <label class="row"><input type="checkbox" id="musicOn" checked> Music</label>
+    <label class="row"><input type="checkbox" id="sfxOn" checked> Sound effects</label>
+    <label class="row">Volume <input type="range" id="volume" min="0" max="100" value="70"></label>
+    <fieldset>
+      <legend>EEG headset (Web Serial)</legend>
+      <p id="serialSupport" class="hint"></p>
+      <div class="row"><button id="pairBtn" class="btn ghost" type="button">Pair device</button></div>
+      <label class="row">Device
+        <select id="portList"></select>
+        <button id="connBtn" class="btn ghost" type="button">Connect</button>
+      </label>
+      <p class="row">Status <span id="connStatus" class="chip">off</span>
+        <span id="strengthBar"><i></i></span></p>
+      <label class="row"><input type="checkbox" id="simOn"> Simulation mode (no hardware)</label>
+      <p id="latency" class="hint"></p>
+    </fieldset>
+    <button id="closeSettings" class="btn">CLOSE</button>
+  </section>
+</div>
+<script type="module" src="/js/main.js"></script>
+</body>
+</html>
