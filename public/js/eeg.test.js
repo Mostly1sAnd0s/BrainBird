@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { parseLine, createLineSplitter, createDebouncer } from './eeg.js';
+import { parseLine, createLineSplitter, createDebouncer, createConfidenceGate } from './eeg.js';
 
 test('parseLine handles flap and strength lines', () => {
   assert.deepEqual(parseLine('F:0.9'), { type: 'flap', confidence: 0.9 });
@@ -28,6 +28,16 @@ test('line splitter flush returns the unterminated tail', () => {
   split.push('F:0.5\nS:9');
   assert.deepEqual(split.flush(), ['S:9']);
   assert.deepEqual(split.flush(), []);
+});
+
+test('confidence gate blocks flaps below the user threshold', () => {
+  let threshold = 0.7;
+  const gate = createConfidenceGate(() => threshold);
+  assert.equal(gate(0.69), false);
+  assert.equal(gate(0.7), true, 'exactly at threshold passes');
+  assert.equal(gate(0.95), true);
+  threshold = 0.9; // user moves the slider mid-game
+  assert.equal(gate(0.8), false, 'new threshold applies immediately');
 });
 
 test('debouncer blocks flaps closer than the window', () => {

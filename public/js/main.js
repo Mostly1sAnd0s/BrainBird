@@ -1,11 +1,11 @@
 // BrainBird client entry: fixed-timestep loop, state machine, input routing,
 // EEG wiring with debounce + latency readout. Game rules live in game.js (tested).
-import { createWorld, flap, stepWorld, WORLD_H } from './game.js';
+import { createWorld, flap, stepWorld, clampGravity, WORLD_H } from './game.js';
 import { render, createFx } from './render.js';
 import { initAudio, startMusic, stopMusic, setSettings, sfxFlap, sfxScore, sfxHit, sfxLevelUp } from './audio.js';
 import { createEegClient, serialSupported } from './serial.js';
 import { createEegSim } from './eegsim.js';
-import { createDebouncer } from './eeg.js';
+import { createDebouncer, createConfidenceGate } from './eeg.js';
 import { fetchHighScores, submitScore } from './net.js';
 import { createUi, saveSettings } from './ui.js';
 
@@ -14,16 +14,17 @@ const ctx = canvas.getContext('2d');
 
 let world = createWorld();
 const fx = createFx();
-let state = 'menu'; // menu | play | dead | settings-cover (world keeps scrolling)
+let state = 'menu'; // menu | play | dead (world keeps scrolling behind overlays)
 let flapSource = 'keyboard';
-let lastScoredAt = -Infinity;
+let settings = { gravity: 0.35, gate: 0.5 }; // merged with localStorage at boot
 
 const flapDebouncer = createDebouncer(250); // EEG flaps only; spacebar is raw
+const confidenceGate = createConfidenceGate(() => settings.gate);
 
 // --- state transitions -------------------------------------------------------
 
 function resetWorld() {
-  world = createWorld();
+  world = createWorld({ gravity: clampGravity(settings.gravity) });
   ui.setScore(0);
 }
 
@@ -35,7 +36,18 @@ function startGame() {
   state = 'play';
   ui.showMenu(false);
   ui.showGameOver(false);
+  ui.showStatusbar(true);
   doFlap('keyboard');
+}
+
+function toMenu() {
+  state = 'menu';
+  resetWorld();
+  ui.showMenu(true);
+  ui.showGameOver(false);
+  ui.closeSettings();
+  ui.showStatusbar(false);
+  stopMusic();
 }
 
 function die() {
@@ -53,6 +65,7 @@ function doFlap(source) {
   flapSource = source;
   flap(world);
   sfxFlap(source);
+  ui.flashFlap(source === 'keyboard' ? 'kbd' : 'ok');
   fx.burst(world.bird.x - 10, world.bird.y + 6, 3, '#00f0ff', 1.2);
 }
 
@@ -66,6 +79,11 @@ function primaryAction() { // space
 }
 
 window.addEventListener('keydown', (e) => {
+  if (e.code === 'Escape') {
+    if (ui.settingsOpen()) ui.closeSettings();
+    else toMenu(); // from play (abandons the run) or from game-over
+    return;
+  }
   if (e.code !== 'Space') return;
   const typing = document.activeElement?.tagName === 'INPUT';
   if (typing) return; // let the name field take spaces
@@ -92,13 +110,19 @@ const eeg = {
 function handleEegEvent(ev, nowMs) {
   if (ev.type === 'strength') {
     ui.setStrength(Math.min(1, ev.value / 1024));
+    ui.setSignal(Math.min(1, ev.value / 1024));
     return;
   }
   if (ev.type !== 'flap') return;
   const src = eeg.sim?.running && !eeg.client?.port ? 'sim' : 'eeg';
-  if (!flapDebouncer(nowMs)) return;
   const latency = Math.round(performance.now() - nowMs);
   if (latency >= 0 && latency < 1000) ui.setLatency(latency);
+  // the user's cognitive jump point: soft intents are visible but silent
+  if (!confidenceGate(ev.confidence)) {
+    ui.flashFlap('no');
+    return;
+  }
+  if (!flapDebouncer(nowMs)) return;
   if (state === 'menu' || state === 'dead') startGame();
   else doFlap(src);
 }
@@ -112,11 +136,14 @@ const ui = createUi({
     catch { return null; }
   },
   onSettingsChange: (s) => {
-    saveSettings(s);
-    setSettings(s);
+    Object.assign(settings, s);
+    saveSettings(settings);
+    setSettings(s); // music/sfx/volume only reads the keys it knows
+    world.gravity = clampGravity(s.gravity); // live-tune mid-flight
     if (s.sim) eeg.sim?.start();
     else eeg.sim?.stop();
   },
+  onMenu: () => toMenu(),
 });
 
 // --- main loop (fixed timestep, render every frame) ----------------------------

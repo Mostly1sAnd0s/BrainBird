@@ -12,7 +12,8 @@ Plug an Arduino-based EEG sensor into your computer and focus to flap. No headse
 - **Synthesized audio** — all sounds are generated with WebAudio. EEG flaps get a distinct "psychic" chord so you can hear your brain working.
 - **Procedural obstacles** — difficulty ramps with your score.
 - **Shared high scores** — top 10 with names, stored on the server, EEG runs badged with a brain icon.
-- **Settings page** — music/SFX toggles, volume, device pairing and connection status, signal-strength meter.
+- **Settings page** — music/SFX toggles, volume, drop-speed slider (slow the fall for EEG play), jump-threshold slider (your "cognitive jump point"), device pairing and connection status, signal-strength meter.
+- **Live tuning bar** — during play: signal strength, a marker showing your jump threshold, and a light that flashes FLAP / TOO SOFT / KEY so you can tune the threshold while flying. Press Esc anytime to return to the menu.
 
 ## Requirements
 

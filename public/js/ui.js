@@ -11,13 +11,16 @@ export function saveSettings(s) {
   localStorage.setItem('brainbird.settings', JSON.stringify(s));
 }
 
-export function createUi({ onStartSubmit, onSubmitScore, onSettingsChange, eeg }) {
+export function createUi({ onSubmitScore, onSettingsChange, onMenu, eeg }) {
   const el = {
     menu: $('menu'), gameover: $('gameover'), settings: $('settings'),
     score: $('score'), finalScore: $('finalScore'), rankMsg: $('rankMsg'),
     hiscores: $('hiscores').querySelector('tbody'),
     playerName: $('playerName'),
     musicOn: $('musicOn'), sfxOn: $('sfxOn'), volume: $('volume'),
+    gravity: $('gravity'), gate: $('gate'), gateReadout: $('gateReadout'),
+    statusbar: $('statusbar'), signalFill: $('signalBar').querySelector('i'),
+    gateTick: $('gateTick'), gateVal: $('gateVal'), flapLight: $('flapLight'), dropVal: $('dropVal'),
     connStatus: $('connStatus'), strengthBar: $('strengthBar').querySelector('i'),
     latency: $('latency'), portList: $('portList'), simOn: $('simOn'),
   };
@@ -27,12 +30,17 @@ export function createUi({ onStartSubmit, onSubmitScore, onSettingsChange, eeg }
   function emitSettings() {
     onSettingsChange({
       music: el.musicOn.checked, sfx: el.sfxOn.checked, vol: el.volume.value / 100,
-      sim: el.simOn.checked,
+      sim: el.simOn.checked, gravity: Number(el.gravity.value), gate: Number(el.gate.value),
     });
+    el.gateReadout.textContent = Number(el.gate.value).toFixed(2);
+    el.gateTick.style.left = `${el.gate.value * 100}%`;
+    el.gateVal.textContent = `gate ${Number(el.gate.value).toFixed(2)}`;
+    el.dropVal.textContent = Number(el.gravity.value).toFixed(2);
   }
 
   // settings wiring
   $('openSettings').addEventListener('click', () => show(el.settings, true));
+  $('menuBtn').addEventListener('click', onMenu);
   $('closeSettings').addEventListener('click', () => show(el.settings, false));
   for (const input of [el.musicOn, el.sfxOn, el.volume, el.simOn]) input.addEventListener('change', emitSettings);
 
@@ -58,6 +66,14 @@ export function createUi({ onStartSubmit, onSubmitScore, onSettingsChange, eeg }
   return {
     showMenu(on) { show(el.menu, on); if (on) refreshPortList(); },
     settingsOpen() { return !el.settings.classList.contains('hidden'); },
+    closeSettings() { show(el.settings, false); },
+    showStatusbar(on) { show(el.statusbar, on); },
+    // flap verdict light: did the last intent clear the user's jump threshold?
+    flashFlap(kind) { // 'ok' | 'no' | 'kbd'
+      el.flapLight.className = kind;
+      el.flapLight.textContent = kind === 'ok' ? 'FLAP \u{1F4AA}' : kind === 'no' ? 'TOO SOFT' : 'KEY';
+    },
+    setSignal(v01) { el.signalFill.style.width = `${Math.min(100, v01 * 100)}%`; },
     showGameOver(on) { show(el.gameover, on); },
     setScore(n) { el.score.textContent = n > 0 ? n : ''; },
     setFinalScore(n) { el.finalScore.textContent = `SCORE ${n}`; },

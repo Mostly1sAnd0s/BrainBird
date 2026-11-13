@@ -58,3 +58,22 @@ select { font-family: inherit; background: #1b0b33; color: #fff; border: 1px sol
   border: 1px solid var(--violet); vertical-align: middle; }
 #strengthBar i { display: block; height: 100%; width: 0%;
   background: linear-gradient(90deg, var(--cyan), var(--neon)); transition: width 0.2s; }
+
+/* live tuning bar: signal strength + jump-threshold marker + flap verdict light */
+#statusbar.hidden { display: none; } /* id beats class for specificity */
+#statusbar { position: absolute; bottom: 1.5vh; left: 50%; transform: translateX(-50%);
+  display: flex; align-items: center; gap: 0.6em; padding: 0.3em 0.9em;
+  background: rgba(10, 1, 24, 0.75); border: 1px solid var(--violet); border-radius: 0.5em;
+  font-size: clamp(0.65rem, 1.8vmin, 0.9rem); pointer-events: none; }
+#statusbar .lbl { color: #9d8cc7; }
+#signalBar { position: relative; display: inline-block; width: 10em; height: 0.6em;
+  background: #1b0b33; border: 1px solid var(--violet); }
+#signalBar i { display: block; height: 100%; width: 0%;
+  background: linear-gradient(90deg, var(--cyan), var(--neon)); transition: width 0.15s; }
+#gateTick { position: absolute; top: -3px; bottom: -3px; left: 50%; width: 2px;
+  background: #ffe36e; box-shadow: 0 0 6px #ffe36e; }
+#gateVal { color: #ffe36e; }
+#flapLight { min-width: 5.5em; text-align: center; }
+#flapLight.ok { color: #00ff9d; text-shadow: 0 0 8px #00ff9d; }
+#flapLight.no { color: #ff4040; text-shadow: 0 0 8px #ff4040; }
+#flapLight.kbd { color: var(--cyan); }

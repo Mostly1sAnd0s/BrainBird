@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { GRAVITY, FLAP_IMPULSE, WORLD_W, WORLD_H, createWorld, flap, stepWorld, circleRect } from './game.js';
+import { GRAVITY, FLAP_IMPULSE, GRAVITY_MIN, GRAVITY_MAX, WORLD_W, WORLD_H, createWorld, flap, stepWorld, circleRect, clampGravity } from './game.js';
 
 test('world starts alive with bird at rest', () => {
   const w = createWorld();
@@ -17,6 +17,23 @@ test('gravity pulls the bird down over time', () => {
   const y1 = w.bird.y;
   stepWorld(w, 1 / 60);
   assert.ok(w.bird.y > y1);
+});
+
+test('world gravity is adjustable and respected', () => {
+  const w = createWorld({ pipes: [], gravity: 0.14 }); // floaty eeg-friendly fall
+  assert.equal(w.gravity, 0.14);
+  stepWorld(w, 1 / 60);
+  assert.ok(Math.abs(w.bird.vy - 0.14) < 1e-9, 'uses custom gravity');
+  const heavy = createWorld({ pipes: [], gravity: GRAVITY });
+  stepWorld(heavy, 1 / 60);
+  assert.ok(heavy.bird.vy > w.bird.vy, 'heavier world falls faster');
+});
+
+test('clampGravity keeps settings input in the safe band', () => {
+  assert.equal(clampGravity(0), GRAVITY_MIN);
+  assert.equal(clampGravity(99), GRAVITY_MAX);
+  assert.equal(clampGravity(0.3), 0.3);
+  assert.equal(clampGravity('junk'), GRAVITY); // bad stored value -> default
 });
 
 test('flap sets upward impulse', () => {

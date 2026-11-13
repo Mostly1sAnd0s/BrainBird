@@ -32,6 +32,13 @@ export function createLineSplitter() {
   };
 }
 
+// User-tunable "cognitive jump point": the minimum confidence an F: event must
+// carry to count as a flap. The threshold is read through a getter so the user
+// can move the slider mid-flight and the next event already obeys it.
+export function createConfidenceGate(getThreshold) {
+  return (confidence) => confidence >= getThreshold();
+}
+
 // Returns a predicate: call with Date.now(); true only when the flap is allowed.
 export function createDebouncer(minMs) {
   let last = -Infinity;

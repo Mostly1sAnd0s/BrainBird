@@ -5,15 +5,26 @@ import { spawnPipe, difficultyFor } from './pipes.js';
 
 export const WORLD_W = 960;
 export const WORLD_H = 540;
-export const GRAVITY = 0.35; // px/frame^2 at 60 Hz
+export const GRAVITY = 0.35; // px/frame^2 at 60 Hz (default)
+export const GRAVITY_MIN = 0.12; // floaty: eeg-friendly
+export const GRAVITY_MAX = 0.6; // heavy: arcade-snappy
+
+// Clamp user-supplied gravity (from the settings slider) into the safe band.
+// Non-numeric junk (corrupt localStorage) falls back to the default.
+export function clampGravity(g) {
+  const n = Number(g);
+  if (!Number.isFinite(n)) return GRAVITY;
+  return Math.min(GRAVITY_MAX, Math.max(GRAVITY_MIN, n));
+}
 export const FLAP_IMPULSE = -6.2; // px/frame
 export const BIRD_X = WORLD_W * 0.28;
 export const BIRD_R = 13;
 export const HITBOX_SHRINK = 4; // forgiving collisions
 
-export function createWorld({ seed = (Date.now() ^ (Math.random() * 1e9)) >>> 0, pipes = null } = {}) {
+export function createWorld({ seed = (Date.now() ^ (Math.random() * 1e9)) >>> 0, pipes = null, gravity = GRAVITY } = {}) {
   return {
     seed,
+    gravity: clampGravity(gravity),
     rng: mulberry32(seed),
     t: 0, // elapsed frames (60 Hz units), drives pipe drift sine
     score: 0,
@@ -48,7 +59,7 @@ export function stepWorld(w, dt) {
 
   // bird physics
   const b = w.bird;
-  b.vy += GRAVITY * dtf;
+  b.vy += w.gravity * dtf;
   b.y += b.vy * dtf;
   if (b.y < 0) { b.y = 0; b.vy = Math.max(b.vy, 0); } // sky clamps, floor kills
   b.rot = Math.max(-0.5, Math.min(1.2, b.vy / 10));
